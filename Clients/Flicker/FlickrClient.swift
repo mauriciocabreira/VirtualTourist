@@ -1,8 +1,9 @@
 //
 //  FlickrClient.swift
-//  
+//  VirtualTourist
 //
-//  Created by Mauricio Cabreira on 15/12/17.
+//  Created by Mauricio Cabreira on 19/12/17.
+//  Copyright © 2017 Mauricio Cabreira. All rights reserved.
 //
 
 import UIKit
@@ -75,13 +76,13 @@ class FlickrClient: NSObject {
       let imageURL = URL(string: photoURL)
       DispatchQueue.global(qos: .background).async {
         if let imageData = try? Data(contentsOf: imageURL!) {
-       
+          
           // Store image in CD
           self.sharedContext.performAndWait {
             photo.image = imageData as NSData
             CoreDataStack.sharedInstance().save()
           }
-        
+          
           // Inform completion handler that download has been successful.
           self.sharedContext.performAndWait {
             completionHandlerForDownloadAndStoreFlickrPhoto(true, nil)
@@ -198,11 +199,11 @@ class FlickrClient: NSObject {
           savePhotoURLToCD(pin: pin, photoURL: randomlyChosenPhotoURLString)
         }
       }
-    
+      
       performUIUpdatesOnMain {
         CoreDataStack.sharedInstance().save()
       }
- 
+      
     }
   }
   
@@ -299,6 +300,7 @@ extension FlickrClient {
     completionHandlerForFlickrTaskAndDataParsingHelper(photosDictionary, true, nil)
   }
 }
+
 
 
 
