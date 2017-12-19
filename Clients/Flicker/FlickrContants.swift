@@ -37,6 +37,7 @@ extension FlickrClient {
       static let Text = "text"
       static let BoundingBox = "bbox"
       static let Page = "page"
+      static let PerPage = "per_page"
     }
     
     // MARK: Flickr Parameter Values
@@ -49,7 +50,8 @@ extension FlickrClient {
       static let GalleryID = "5704-72157622566655097"
       static let MediumURL = "url_m"
       static let UseSafeSearch = "1"
-      static let NumberofPhotosToRetrievePerPin = 30
+      static let NumberofPhotosToRetrievePerPin = 24
+      
     }
     
     // MARK: Flickr Response Keys

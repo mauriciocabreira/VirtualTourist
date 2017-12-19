@@ -38,9 +38,7 @@ class PhotoViewController: UIViewController, MKMapViewDelegate, UICollectionView
   
   var selectedPin: Pin?
   
-//  Array of selected images in Collection view that can be deleted
   var selectedCellIndexPaths = [IndexPath]()
-  
   var insertedCellIndexPaths: [IndexPath]!
   var deletedCellIndexPaths: [IndexPath]!
   
@@ -79,16 +77,9 @@ class PhotoViewController: UIViewController, MKMapViewDelegate, UICollectionView
     
     displayPinInMapView(pin: selectedPin!)
     
-    // Enable collection view to select multiple items
     collectionView.allowsMultipleSelection = true
     
-    // Fetch the pin's photos from core data.
-    performPhotoFetchRequest(photoFetchedResultsController)
-    
-    // Fetch photos from flicker if none stored. Then save it under Pin CD
-    if photoFetchedResultsController.fetchedObjects?.count == 0 {
-      FlickrClient.sharedInstance().getAndStoreFlickrPhotoURLsForPin(selectedPin!)
-    }
+    showPhotoCollection()
   }
   
   // MARK: Generic functions
@@ -104,20 +95,18 @@ class PhotoViewController: UIViewController, MKMapViewDelegate, UICollectionView
   
   // MARK: Get new set of photos and delete current ones
   func getNewCollection() {
-  
     // 1st: Clear the photos stored in the data structure.
     if let storedPhotos = photoFetchedResultsController.fetchedObjects {
+      
       for photo in storedPhotos {
         sharedContext.delete(photo)
       }
-      // Update CD on background
+      
       performUIUpdatesOnMain {
         CoreDataStack.sharedInstance().save()
       }
     }
-    
-    //  2nd: now get a new set of photos
-    FlickrClient.sharedInstance().getAndStoreFlickrPhotoURLsForPin(self.selectedPin!)
+    FlickrClient.sharedInstance().downloadFlickrImages(selectedPin!)
   }
   
   
@@ -146,7 +135,7 @@ class PhotoViewController: UIViewController, MKMapViewDelegate, UICollectionView
     pinAnnotation.coordinate.latitude = pin.latitude
     pinAnnotation.coordinate.longitude = pin.longitude
     pinMapView.addAnnotation(pinAnnotation)
-    pinMapView.camera.altitude = 750.0
+    pinMapView.camera.altitude = 1200.0
     pinMapView.centerCoordinate = pinAnnotation.coordinate
     
   }
@@ -159,6 +148,17 @@ class PhotoViewController: UIViewController, MKMapViewDelegate, UICollectionView
       } catch let error as NSError {
         print("Error while fetching photos : \(error)")
       }
+    }
+  }
+  
+  func showPhotoCollection() {
+    
+    // Fetch the pin's photos from core data.
+    performPhotoFetchRequest(photoFetchedResultsController)
+  
+    // Fetch photos from flicker if none stored. Then save it under Pin CD
+    if photoFetchedResultsController.fetchedObjects?.count == 0 {
+      FlickrClient.sharedInstance().downloadFlickrImages(selectedPin!)
     }
   }
 }
@@ -193,10 +193,7 @@ extension PhotoViewController {
     // The cell to be dequeued
     let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "PhotoCollectionViewCell", for: indexPath) as! PhotoCollectionViewCell
     
-    // Display the placeholder image in the cell, unitl photo is downloaded/retrieved
-    cell.collectionCellImageView?.image = UIImage(named: "photo-placeholder")
     
-    cell.activityIndicator.startAnimating()
     
     // Display photos that were previously stored in CD
     if let fetchedPhotos = photoFetchedResultsController.fetchedObjects, fetchedPhotos.count > 0 {
@@ -204,15 +201,23 @@ extension PhotoViewController {
       // The Photo stored in core data that corresponds to this particular cell
       let storedPhotoForCell = fetchedPhotos[(indexPath as NSIndexPath).item]
       
+      
       // If stored image data is present for the cell's Photo, then convert to a
       // UIImage and display within cell's imageview.
       if let storedImageDataForPhoto = storedPhotoForCell.image {
         
         cell.collectionCellImageView?.image = UIImage(data: storedImageDataForPhoto as Data)
-        cell.activityIndicator.hidesWhenStopped = true
         cell.activityIndicator.stopAnimating()
         
+        //print("Associando imagem 00000000000000. Number of photos count: \(fetchedPhotos.count) IndexPath: \(indexPath) storedPhotoForCell.url: \(storedPhotoForCell.url), storedPhotoForCell.pin?.latitude: \(storedPhotoForCell.pin?.latitude)")
+        
+        
       } else {
+        // Display the placeholder image in the cell, unitl photo is downloaded/retrieved
+        cell.collectionCellImageView?.image = UIImage(named: "photo-placeholder")
+        cell.activityIndicator.startAnimating()
+        cell.activityIndicator.hidesWhenStopped = true
+        
         
         // No photo has been store in CD. Download it from flicker with stored URL
         if storedPhotoForCell.url != nil {
@@ -220,12 +225,15 @@ extension PhotoViewController {
           // Download the phothe data and store in CD
           FlickrClient.sharedInstance().downloadAndStoreFlickrPhoto(storedPhotoForCell) { (success, errorString) in
             if success {
-              // If image data download and storage successful, retrieve the latest
-              // photos data for the pin.
               self.performPhotoFetchRequest(self.photoFetchedResultsController)
-              // Then reload the Collection VC to display new data.
-              performUIUpdatesOnMain {
-                self.collectionView.reloadData()
+              
+              
+              // The Photo stored in core data that corresponds to this particular cell
+              let storedPhotoForCell = fetchedPhotos[(indexPath as NSIndexPath).item]
+              if let storedImageDataForPhoto = storedPhotoForCell.image {
+                
+                cell.collectionCellImageView?.image = UIImage(data: storedImageDataForPhoto as Data)
+                cell.activityIndicator.stopAnimating()
               }
             }
             else {
@@ -240,6 +248,7 @@ extension PhotoViewController {
   
   // MARK: Selecting one or more photos
   func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+    
     
     // Store in array the selected photo.
     selectedCellIndexPaths.append(indexPath)
@@ -331,6 +340,6 @@ extension PhotoViewController {
     
     return pinView
   }
-
+  
 }
 

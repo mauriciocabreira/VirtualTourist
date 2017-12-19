@@ -23,7 +23,6 @@ class MapViewController: UIViewController, MKMapViewDelegate, NSFetchedResultsCo
   
   @IBAction func pinDropped(_ sender: UILongPressGestureRecognizer) {
     
-    //    this avoid multiple pins. Creates only when it begins
     if sender.state == .began {
       
       let locationTouched = sender.location(in: mapView)
@@ -48,24 +47,16 @@ class MapViewController: UIViewController, MKMapViewDelegate, NSFetchedResultsCo
     
     super.viewDidLoad()
     checkIfFirstLaunch()
+    showPins()
     
-    // Fetch saved pins. A: Create a fetchPinRequest B: Then perform the actual PIN retrieval
-    if let pinFetchedResultsController = createPinFetchedResultsController(nil, nil) {
-      
-      performPinFetchRequest(pinFetchedResultsController)
-      
-      if let pins = pinFetchedResultsController.fetchedObjects {
-      
-        for pin in pins {
-          let pinMKPointAnnotation = MKPointAnnotation()
-          pinMKPointAnnotation.coordinate.latitude = pin.latitude
-          pinMKPointAnnotation.coordinate.longitude = pin.longitude
-          
-          mapView.addAnnotation(pinMKPointAnnotation)
-        }
-      }
-    }
   }
+  
+  override func viewWillAppear(_ animated: Bool) {
+    //self.navigationController?.hidesBarsOnSwipe = true
+    updateMapViewCurrentStatus(mapView)
+    showPins()
+  }
+  
   
   // MARK: Find the selected pin in coredata
   func findPinCoreData(selectedPinView: MKAnnotationView) -> Pin? {
@@ -190,6 +181,24 @@ extension MapViewController {
     UserDefaults.standard.set(mapView.region.span.latitudeDelta, forKey: "mapZoomLatitude")
     UserDefaults.standard.set(mapView.region.span.longitudeDelta, forKey: "mapZoomLongitude")
     UserDefaults.standard.synchronize()
+  }
+  
+  func showPins() {
+    if let pinFetchedResultsController = createPinFetchedResultsController(nil, nil) {
+      
+      performPinFetchRequest(pinFetchedResultsController)
+      
+      if let pins = pinFetchedResultsController.fetchedObjects {
+        
+        for pin in pins {
+          let pinMKPointAnnotation = MKPointAnnotation()
+          pinMKPointAnnotation.coordinate.latitude = pin.latitude
+          pinMKPointAnnotation.coordinate.longitude = pin.longitude
+          
+          mapView.addAnnotation(pinMKPointAnnotation)
+        }
+      }
+    }
   }
 }
 

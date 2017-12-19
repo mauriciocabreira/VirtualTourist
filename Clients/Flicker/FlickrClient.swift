@@ -25,7 +25,7 @@ class FlickrClient: NSObject {
   let session = URLSession.shared
   
   // MARK: Get Flicker photos for a dropped pin
-  func getAndStoreFlickrPhotoURLsForPin(_ pin: Pin) {
+  func downloadFlickrImages(_ pin: Pin) {
     
     // Method parameters for Flickr API calls.
     let methodParameters =
@@ -36,6 +36,7 @@ class FlickrClient: NSObject {
         Constants.FlickrParameterKeys.SafeSearch: Constants.FlickrParameterValues.UseSafeSearch,
         Constants.FlickrParameterKeys.Extras: Constants.FlickrParameterValues.MediumURL,
         Constants.FlickrParameterKeys.Format: Constants.FlickrParameterValues.ResponseFormat,
+        Constants.FlickrParameterKeys.PerPage: String(Constants.FlickrParameterValues.NumberofPhotosToRetrievePerPin),
         Constants.FlickrParameterKeys.NoJSONCallback: Constants.FlickrParameterValues.DisableJSONCallback
     ]
     
@@ -69,7 +70,6 @@ class FlickrClient: NSObject {
   
   // MARK: Download and store a photo from Flickr
   func downloadAndStoreFlickrPhoto(_ photo: Photo, completionHandlerForDownloadAndStoreFlickrPhoto: @escaping (_ success: Bool, _ errorString: String?) -> Void) {
-    
     // Download the photo in background
     if let photoURL = photo.url {
       let imageURL = URL(string: photoURL)
@@ -174,11 +174,10 @@ class FlickrClient: NSObject {
     // If less than x photos on results page, select them all.
     if numberOfPhotosOnPage < FlickrClient.Constants.FlickrParameterValues.NumberofPhotosToRetrievePerPin {
       for entry in flickrPhotoArrayForPage {
-        // Does the photo have a key for 'url_m'?
         if let entry = entry, let photoURLString = entry[Constants.FlickrResponseKeys.MediumURL] as? String {
           
           // save photo URL. Note that image has not been downloaded yet.
-          savePhotoURLToCoreData(pin: pin, photoURL: photoURLString)
+          savePhotoURLToCD(pin: pin, photoURL: photoURLString)
         }
       }
       performUIUpdatesOnMain {
@@ -193,19 +192,22 @@ class FlickrClient: NSObject {
         
         indicesOfPhotosAlreadyChosen.append(randomUniqueIndex)
         
+        // apagar - comecou a dar merda antes de chegar aqui!!!
         // Does the photo have a key 'url_m'?
         if let randomlyChosenPhotoEntry = flickrPhotoArrayForPage[randomUniqueIndex], let randomlyChosenPhotoURLString = randomlyChosenPhotoEntry[Constants.FlickrResponseKeys.MediumURL] as? String {
-          savePhotoURLToCoreData(pin: pin, photoURL: randomlyChosenPhotoURLString)
+          savePhotoURLToCD(pin: pin, photoURL: randomlyChosenPhotoURLString)
         }
       }
+    
       performUIUpdatesOnMain {
         CoreDataStack.sharedInstance().save()
       }
+ 
     }
   }
   
   // MARK: Save photo URL to CD
-  func savePhotoURLToCoreData(pin: Pin, photoURL: String) {
+  func savePhotoURLToCD(pin: Pin, photoURL: String) {
     
     performUIUpdatesOnMain {
       let photoToSave = Photo(context: self.sharedContext)
